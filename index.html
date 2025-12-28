@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Dictation Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            /* SHARED THEME: Classic Game Show (Deep Blue & Gold) */
+            --primary: #FFD700;     /* Gold */
+            --secondary: #00a8ff;   /* Bright Blue */
+            --bg-dark: #001e4d;     /* Deep Royal Blue */
+            --panel-bg: #002a55;    /* Lighter Navy */
+            --text-main: #ffffff;
+            --success: #2ed573;
+            --danger: #ff4757;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Segoe UI', sans-serif; }
+
+        /* Custom Scrollbar for Tabs */
+        ::-webkit-scrollbar { height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 4px; }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 50%, #003366 0%, #001e4d 100%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 30px;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 3px solid var(--primary);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-family: 'Arial Black', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary);
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+            font-size: 1.4rem;
+        }
+
+        /* --- Game Controls (Mode Toggle) --- */
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .mode-switch {
+            display: flex;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .mode-btn {
+            background: transparent;
+            color: #aaa;
+            padding: 5px 15px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .mode-btn.active {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .current-level-badge {
+            background: var(--primary);
+            color: black;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        /* NEW: Menu Button Style */
+        .reset-level-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #88aadd;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 15px;
+            transition: 0.2s;
+            text-transform: uppercase;
+        }
+        .reset-level-btn:hover {
+            border-color: var(--secondary);
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- Team Scoreboard --- */
+        .scoreboard {
+            display: flex;
+            gap: 15px;
+        }
+
+        /* Solo Stats */
+        .solo-stats {
+            display: none; /* Hidden by default */
+            gap: 15px;
+        }
+
+        .team-box, .stat-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 100px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .team-box:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--primary);
+        }
+        
+        .label-text { font-size: 0.8rem; color: #88aadd; text-transform: uppercase; }
+        .score-value { color: var(--primary); font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: bold; }
+
+        /* --- Tabs Navigation --- */
+        .tabs-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 15px 20px;
+            background: rgba(0,0,0,0.2);
+            white-space: nowrap;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            background: rgba(255,255,255,0.05);
+            color: #88aadd;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: white;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #001e4d;
+            font-weight: 900;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        /* --- Game Area --- */
+        .game-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            overflow-y: auto;
+        }
+
+        .level-indicator {
+            font-size: 1rem;
+            color: #88aadd;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Audio Controls */
+        .audio-controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .audio-btn {
+            background: linear-gradient(145deg, #0056b3, #004080);
+            color: white;
+            border: 2px solid #4da6ff;
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            font-size: 3rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .audio-btn:active { transform: scale(0.95); box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+        .audio-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+        .slow-btn {
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+            background: rgba(255,255,255,0.1);
+            border-color: #aaa;
+        }
+
+        /* Input Area */
+        .input-container {
+            width: 100%;
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .dictation-input {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 3px solid #4da6ff;
+            border-radius: 15px;
+            padding: 20px;
+            font-size: 1.8rem;
+            color: white;
+            text-align: center;
+            outline: none;
+            transition: 0.3s;
+            user-select: text !important; /* Allow typing */
+        }
+
+        .dictation-input:focus {
+            border-color: var(--primary);
+            background: rgba(0,0,0,0.5);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+
+        .dictation-input.correct { border-color: var(--success); background: rgba(46, 213, 115, 0.1); }
+        .dictation-input.wrong { border-color: var(--danger); animation: shake 0.4s; }
+
+        /* Feedback */
+        .feedback-area {
+            min-height: 60px;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .text-correct { color: var(--success); }
+        .text-wrong { color: var(--danger); }
+        .diff-added { color: var(--primary); text-decoration: underline; }
+
+        /* Controls */
+        .action-bar {
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 900;
+            text-transform: uppercase;
+            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-check {
+            background: linear-gradient(45deg, var(--secondary), #0077b3);
+            color: white;
+            border: 2px solid white;
+        }
+        .btn-check:hover { transform: scale(1.05); filter: brightness(1.1); }
+        
+        .btn-reveal {
+            background: rgba(255,255,255,0.1);
+            color: #aaa;
+            border: 2px solid #555;
+        }
+        .btn-reveal:hover { color: white; border-color: white; }
+
+        /* --- Footer --- */
+        footer {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 2px solid var(--secondary);
+            flex-shrink: 0;
+        }
+
+        .brand-text {
+            color: white; 
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .upload-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #88aadd;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .upload-btn:hover {
+            border-color: var(--secondary);
+            color: white;
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* --- Animations --- */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* --- Modal (General) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-card {
+            background: var(--panel-bg);
+            padding: 40px;
+            border: 4px solid var(--primary);
+            border-radius: 20px;
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+        }
+
+        /* Level Selector Grid */
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .level-btn {
+            background: linear-gradient(180deg, #004080, #00264d);
+            border: 2px solid #4da6ff;
+            color: white;
+            padding: 30px 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .level-btn:hover {
+            border-color: var(--primary);
+            background: linear-gradient(180deg, #00509e, #003366);
+            transform: translateY(-5px);
+        }
+        .level-sub {
+            display: block;
+            font-size: 0.8rem;
+            color: #88aadd;
+            margin-top: 5px;
+            font-weight: normal;
+        }
+
+        /* Team Selector Grid */
+        .team-select-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .team-select-btn {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid white;
+            color: white;
+            padding: 20px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .team-select-btn:hover {
+            background: var(--primary);
+            color: black;
+            transform: scale(1.05);
+        }
+
+        @media(max-width: 768px) {
+            .dictation-input { font-size: 1.2rem; }
+            h1 { font-size: 1rem; }
+            .tabs-container { padding: 10px; }
+            .tab-btn { padding: 6px 15px; font-size: 0.8rem; }
+            footer { flex-direction: column; gap: 10px; text-align: center; padding: 20px; }
+            .audio-btn { width: 80px; height: 80px; font-size: 2.5rem; }
+            .header-controls { flex-direction: column; gap: 5px; }
+            .level-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-controls">
+        <h1>🎧 Dictation Pro <span id="levelBadge" class="current-level-badge">A1</span></h1>
+        
+        <!-- NEW: Menu Button added here -->
+        <button class="reset-level-btn" onclick="goToMainMenu()">☰ Main Menu</button>
+
+        <div class="mode-switch">
+            <button class="mode-btn" id="btnModeSolo" onclick="setMode('solo')">Solo</button>
+            <button class="mode-btn active" id="btnModeTeam" onclick="setMode('team')">Teams</button>
+        </div>
+    </div>
+    
+    <div class="scoreboard" id="scoreboard"></div>
+    
+    <div class="solo-stats" id="soloStats">
+        <div class="stat-box">
+            <span class="label-text">SCORE</span>
+            <span class="score-value" id="soloScore">0</span>
+        </div>
+        <div class="stat-box">
+            <span class="label-text">STREAK</span>
+            <span class="score-value" id="soloStreak">0</span>
+        </div>
+    </div>
+</header>
+
+<!-- Tabs -->
+<div class="tabs-container" id="tabsZone"></div>
+
+<div class="game-container">
+    <div class="level-indicator" id="progress">Sentence 1 / 5</div>
+    
+    <div class="audio-controls">
+        <button class="audio-btn slow-btn" onclick="speakText(0.5)" title="Play Slow">🐢</button>
+        <button class="audio-btn" onclick="speakText(1)" title="Play Normal">🔊</button>
+    </div>
+
+    <div class="input-container">
+        <input type="text" id="userInput" class="dictation-input" placeholder="Type exactly what you hear..." autocomplete="off">
+    </div>
+
+    <div class="feedback-area" id="feedback"></div>
+
+    <div class="action-bar">
+        <button class="btn btn-reveal" id="revealBtn" onclick="revealAnswer()">Reveal</button>
+        <button class="btn btn-check" id="checkBtn" onclick="checkAnswer()">Check</button>
+        <button class="btn btn-check" id="nextBtn" onclick="nextQuestion()" style="display:none; background: linear-gradient(45deg, #2ed573, #26af61);">Next →</button>
+    </div>
+</div>
+
+<footer>
+    <div class="brand-text">JeParleEnglish 2025 | Made for learners with ❤️ | elessons14@gmail.com</div>
+    <div>
+        <label for="fileInput" class="upload-btn" style="cursor: pointer;">
+            📂 Upload Custom (.txt)
+        </label>
+        <input type="file" id="fileInput" accept=".json,.txt" style="display:none" onchange="handleFileUpload(this)">
+    </div>
+</footer>
+
+<!-- Level Select Modal -->
+<div class="modal-overlay" id="levelModal" style="display:flex;">
+    <div class="modal-card">
+        <h2 style="color:var(--primary); font-size: 2.5rem; text-transform: uppercase;">Select Proficiency Level</h2>
+        <p style="color:#aaa; font-size:1.2rem;">Choose the difficulty to begin.</p>
+        <div class="level-grid">
+            <button class="level-btn" onclick="selectLevel('Pre-A1')">Pre-A1 <span class="level-sub">Words & Spelling</span></button>
+            <button class="level-btn" onclick="selectLevel('A1')">A1 <span class="level-sub">Beginner</span></button>
+            <button class="level-btn" onclick="selectLevel('A2')">A2 <span class="level-sub">Elementary</span></button>
+            <button class="level-btn" onclick="selectLevel('B1')">B1 <span class="level-sub">Intermediate</span></button>
+            <button class="level-btn" onclick="selectLevel('B2')">B2 <span class="level-sub">Upper-Int</span></button>
+            <button class="level-btn" onclick="selectLevel('C1')">C1 <span class="level-sub">Advanced</span></button>
+            <button class="level-btn" onclick="selectLevel('C2')">C2 <span class="level-sub">Mastery</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Modal (Replacement for window.confirm) -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-card" style="max-width:400px;">
+        <h2 id="confirmTitle" style="color:var(--primary); margin-bottom:20px;">Confirm</h2>
+        <p id="confirmText" style="color:white; font-size:1.2rem; margin-bottom:30px;">Are you sure?</p>
+        <div style="display:flex; justify-content:center; gap:15px;">
+            <button id="confirmYesBtn" class="btn btn-check">Yes</button>
+            <button onclick="closeConfirmModal()" class="btn btn-reveal">No</button>
+        </div>
+    </div>
+</div>
+
+<!-- Point Assignment Modal (Teams) -->
+<div class="modal-overlay" id="pointModal">
+    <div class="modal-card">
+        <h2 style="color:var(--success); margin-bottom:10px;">CORRECT!</h2>
+        <p style="color:white; font-size: 1.2rem;">Who got it right?</p>
+        <div class="team-select-grid" id="pointButtons"></div>
+        <button class="btn btn-reveal" onclick="nextQuestion()">No Points / Skip</button>
+    </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal-overlay" id="renameModal">
+    <div class="modal-card">
+        <h2 style="color:white; margin-bottom:20px;">Rename Team</h2>
+        <input type="text" id="renameInput" style="padding: 10px; font-size: 1.2rem; width: 80%; margin-bottom: 20px; text-align: center;" placeholder="New Name">
+        <div style="display:flex; justify-content:center; gap:10px;">
+            <button class="btn btn-check" onclick="saveTeamName()">Save</button>
+            <button class="btn btn-reveal" onclick="document.getElementById('renameModal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Audio System (SFX) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSfx(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'correct') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.linearRampToValueAtTime(1000, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+    }
+
+    // --- MASSIVE DATABASE (Adaptive) ---
+    const database = {
+        "Pre-A1": {
+            "Colors": ["Red", "Blue", "Green", "Yellow", "Black", "White", "Orange", "Pink", "Purple", "Brown", "Grey", "Gold", "Silver", "Dark", "Light", "Bright", "Color", "Paint", "Draw", "Mix"],
+            "Animals": ["Cat", "Dog", "Fish", "Bird", "Cow", "Pig", "Duck", "Lion", "Bear", "Horse", "Mouse", "Snake", "Sheep", "Goat", "Frog", "Ant", "Bee", "Bat", "Wolf", "Deer"],
+            "Food": ["Apple", "Egg", "Milk", "Bread", "Rice", "Meat", "Fish", "Cake", "Pie", "Soup", "Tea", "Ice", "Bun", "Nut", "Jam", "Ham", "Corn", "Pea", "Bean", "Fig"],
+            "School": ["Pen", "Bag", "Book", "Desk", "Map", "Bin", "Bus", "Bell", "Door", "Room", "Boy", "Girl", "Art", "Gym", "Play", "Read", "Draw", "Sit", "Ask", "Box"]
+        },
+        "A1": {
+            "Introductions": ["Hello my name is Tom.", "Nice to meet you.", "I am from Spain.", "How old are you?", "This is my friend.", "Where do you live?", "I live in London.", "What is your job?", "I am a student.", "She is my sister.", "He is my brother.", "We are friends.", "Good morning teacher.", "See you later.", "Have a nice day.", "What is your name?", "I am ten years old.", "Who is that?", "That is my dad.", "Is this your bag?"],
+            "Daily Routine": ["I wake up at seven.", "I wash my face.", "She eats breakfast.", "We go to school.", "He walks to work.", "They play football.", "I do my homework.", "She watches TV.", "We eat dinner.", "I go to sleep.", "He brushes teeth.", "She drinks milk.", "They read books.", "I listen to music.", "We clean the room.", "He cooks lunch.", "She drives a car.", "I take a shower.", "We get dressed.", "They catch the bus."],
+            "Weather": ["It is sunny today.", "The sky is blue.", "It is raining now.", "It is cold outside.", "Wear a warm coat.", "The sun is hot.", "Look at the snow.", "It is very windy.", "I like summer.", "Winter is cold.", "Spring is green.", "Autumn is brown.", "Is it cloudy?", "The moon is white.", "Stars are bright.", "I see a rainbow.", "Thunder is loud.", "The grass is wet.", "It is foggy today.", "The weather is nice."]
+        },
+        "A2": {
+            "Shopping": ["How much does this cost?", "Can I pay by card?", "I need a new shirt.", "Do you have this in red?", "Where is the fitting room?", "This fits me well.", "I will take it.", "Is this on sale?", "Keep the receipt please.", "I want to return this.", "The shop opens at nine.", "We need some milk.", "Buy two get one free.", "This bag is heavy.", "Where is the bakery?", "I am just looking.", "This is too expensive.", "That is very cheap.", "Do you sell shoes?", "Thank you for shopping."],
+            "Travel": ["Where is the train station?", "I have a ticket.", "When does the bus leave?", "I need a taxi now.", "Is this the right way?", "Turn left at the corner.", "The hotel is nearby.", "I lost my passport.", "We are going to Paris.", "Pack your suitcase.", "The flight is late.", "Show me your ticket.", "Is this seat free?", "We arrived on time.", "Enjoy your holiday.", "Visit the museum.", "Take a photo here.", "Buy a map please.", "The view is beautiful.", "Have a safe trip."],
+            "Health": ["I have a headache.", "My leg hurts a lot.", "I need a doctor.", "Take this medicine.", "She has a fever.", "Drink lots of water.", "Stay in bed today.", "Call an ambulance.", "My stomach hurts.", "I feel very sick.", "He broke his arm.", "She has a cold.", "Visit the dentist.", "Brush your teeth.", "Eat healthy food.", "Do some exercise.", "Sleep eight hours.", "Wash your hands.", "Don't eat sugar.", "Are you feeling better?"]
+        },
+        "B1": {
+            "Work": ["I have a meeting at two o'clock.", "Please send the report by email.", "He works in the finance department.", "We are hiring new staff.", "The office is closed on Sundays.", "She is the manager of sales.", "I need to finish this project.", "Can you answer the phone?", "We have a deadline tomorrow.", "The presentation was successful.", "He was late for the interview.", "Write down the minutes.", "Organize the files properly.", "We need to solve this problem.", "Teamwork is very important.", "My boss is very busy.", "I applied for a promotion.", "Check your schedule today.", "We offer good benefits.", "Sign the contract here."],
+            "Hobbies": ["I enjoy playing the guitar.", "She likes painting landscapes.", "We go hiking every weekend.", "He collects old stamps.", "Reading is my favorite hobby.", "They practice yoga daily.", "Swimming keeps me fit.", "I am learning to cook.", "Gardening is very relaxing.", "Do you like playing chess?", "She is good at drawing.", "We watched a scary movie.", "He plays video games.", "Photography is an art.", "I joined a dance club.", "Fishing requires patience.", "They cycle in the park.", "Knitting is difficult.", "I write short stories.", "Music makes me happy."]
+        },
+        "B2": {
+            "Technology": ["Artificial intelligence is changing the world.", "Please update your software immediately.", "The internet connection is unstable.", "Cybersecurity is a major concern.", "Download the latest version now.", "Virtual reality is becoming popular.", "My laptop battery is draining fast.", "Upload the files to the cloud.", "Social media influences opinions.", "Robots perform dangerous tasks.", "Data privacy is essential.", "The server is currently down.", "Install the antivirus program.", "Technology evolves very rapidly.", "Wireless charging is convenient.", "Smartphones are addictive devices.", "Coding is a useful skill.", "Blockchain ensures security.", "Digital transformation is key.", "Innovation drives progress."],
+            "Environment": ["Climate change is a global issue.", "We must reduce carbon emissions.", "Recycling plastic is important.", "Deforestation harms wildlife.", "Renewable energy is the future.", "Save water whenever possible.", "Pollution affects our health.", "Protect endangered species.", "Global warming is accelerating.", "Use public transport more.", "Plant trees to save earth.", "The ocean level is rising.", "Avoid single-use plastics.", "Sustainable living is necessary.", "Biodiversity creates balance.", "Solar power is efficient.", "Wind turbines generate electricity.", "Conserve natural resources.", "The ecosystem is fragile.", "Think green and act now."]
+        },
+        "C1": {
+            "Literature": ["The protagonist faced an existential crisis.", "Her prose was elegantly constructed.", "The narrative arc was compelling.", "Metaphors enriched the description.", "The ending was ambiguous.", "Critics praised the novel.", "It explores complex themes.", "The dialogue felt authentic.", "Literary devices were used effectively.", "The pacing was deliberate.", "Symbolism pervaded the story.", "It is a masterpiece of fiction.", "The author implies a moral lesson.", "Character development was subtle.", "Irony played a significant role.", "The plot twist was unexpected.", "It reflects the zeitgeist.", "The tone was melancholic.", "An allegory for society.", "Juxtaposition created contrast."],
+            "Science": ["Hypothesis testing verifies theories.", "Photosynthesis converts light to energy.", "Quantum mechanics implies uncertainty.", "The experiment yielded significant results.", "Evolution relies on natural selection.", "DNA replication is precise.", "Thermodynamics governs heat flow.", "Neurology studies the nervous system.", "Chemical reactions release energy.", "Gravity binds the solar system.", "Microorganisms are ubiquitous.", "The ecosystem maintains equilibrium.", "Genetic mutation drives variation.", "Relativity changed physics.", "Entropy increases over time.", "Catalysts speed up reactions.", "Isotopes have different neutrons.", "Photosynthesis produces oxygen.", "Variables must be controlled.", "Statistical analysis confirms data."]
+        },
+        "C2": {
+            "Philosophy": ["Epistemology questions the nature of knowledge.", "Existentialism emphasizes individual freedom.", "Utilitarianism seeks the greatest good.", "Metaphysics explores fundamental reality.", "Ethics determines moral obligations.", "Logic is the anatomy of thought.", "Solipsism doubts external reality.", "Determinism challenges free will.", "Aesthetics examines beauty perception.", "Rationalism prioritizes reason.", "Empiricism relies on sensory experience.", "Nihilism rejects inherent meaning.", "Stoicism advocates emotional control.", "Altruism is selfless concern.", "Ontology studies the nature of being.", "The dialectic method reveals truth.", "Paradoxes challenge intuition.", "Subjectivity influences perception.", "Virtue ethics focuses on character.", "Cognitive dissonance causes discomfort."],
+            "Economics": ["Inflation erodes purchasing power.", "Supply and demand determine price.", "Fiscal policy influences the economy.", "Globalization integrates markets.", "Monopoly restricts competition.", "Gross Domestic Product measures output.", "Interest rates affect investment.", "Cryptocurrency challenges banking.", "Trade deficits can be problematic.", "Elasticity measures responsiveness.", "Opportunity cost is crucial.", "Recession implies economic decline.", "Capitalism encourages innovation.", "Socialism advocates collective ownership.", "Microeconomics studies individual agents.", "Macroeconomics analyzes aggregates.", "Liquidity ensures financial stability.", "Tariffs protect domestic industries.", "The invisible hand guides markets.", "Economic equilibrium is theoretical."]
+        }
+    };
+
+    // --- Global Vars ---
+    let gameData = {}; // Will hold the specific level data
+    let selectedLevel = "A1";
+    let currentCategory = "";
+    let currentIdx = 0;
+    
+    // Mode State
+    let isTeamMode = true;
+    let teams = [
+        { name: "Team 1", score: 0 },
+        { name: "Team 2", score: 0 },
+        { name: "Team 3", score: 0 }
+    ];
+    let soloScore = 0;
+    let soloStreak = 0;
+    let editingTeamIdx = null;
+
+    // --- Modal Logic (Confirmation) ---
+    let confirmCallback = null;
+
+    function showConfirm(text, callback) {
+        document.getElementById('confirmText').textContent = text;
+        confirmCallback = callback;
+        document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').style.display = 'none';
+        confirmCallback = null;
+    }
+    
+    // Bind Yes button dynamically
+    document.getElementById('confirmYesBtn').onclick = function() {
+        if(confirmCallback) confirmCallback();
+        closeConfirmModal();
+    };
+
+    // --- Level Selection ---
+    function selectLevel(level) {
+        selectedLevel = level;
+        gameData = database[level];
+        document.getElementById('levelBadge').textContent = level;
+        document.getElementById('levelModal').style.display = 'none';
+        
+        // Init first category
+        currentCategory = Object.keys(gameData)[0];
+        renderTabs();
+        updateModeUI();
+        loadLevel();
+    }
+
+    // NEW: Function to return to main menu
+    window.goToMainMenu = function() {
+        showConfirm("Go back to Main Menu? Current progress in this level will be lost.", () => {
+            document.getElementById('levelModal').style.display = 'flex';
+        });
+    }
+
+    // --- Mode Switching ---
+    function setMode(mode) {
+        isTeamMode = (mode === 'team');
+        updateModeUI();
+    }
+
+    function updateModeUI() {
+        document.getElementById('btnModeTeam').classList.toggle('active', isTeamMode);
+        document.getElementById('btnModeSolo').classList.toggle('active', !isTeamMode);
+
+        const teamBoard = document.getElementById('scoreboard');
+        const soloBoard = document.getElementById('soloStats');
+
+        if(isTeamMode) {
+            teamBoard.style.display = 'flex';
+            soloBoard.style.display = 'none';
+            renderScoreboard();
+        } else {
+            teamBoard.style.display = 'none';
+            soloBoard.style.display = 'flex';
+            renderSoloStats();
+        }
+    }
+
+    function renderScoreboard() {
+        const board = document.getElementById('scoreboard');
+        board.innerHTML = '';
+        teams.forEach((team, idx) => {
+            const box = document.createElement('div');
+            box.className = 'team-box';
+            box.onclick = () => openRenameModal(idx);
+            box.innerHTML = `<div class="label-text">${team.name} ✎</div><div class="score-value">${team.score}</div>`;
+            board.appendChild(box);
+        });
+    }
+
+    function renderSoloStats() {
+        document.getElementById('soloScore').textContent = soloScore;
+        document.getElementById('soloStreak').textContent = soloStreak;
+    }
+
+    function renderTabs() {
+        const zone = document.getElementById('tabsZone');
+        zone.innerHTML = '';
+        Object.keys(gameData).forEach(cat => {
+            const btn = document.createElement('button');
+            btn.className = `tab-btn ${cat === currentCategory ? 'active' : ''}`;
+            btn.textContent = cat;
+            btn.onclick = () => switchCategory(cat);
+            zone.appendChild(btn);
+        });
+    }
+
+    function switchCategory(cat) {
+        currentCategory = cat;
+        currentIdx = 0;
+        soloStreak = 0;
+        renderTabs();
+        loadLevel();
+    }
+
+    function loadLevel() {
+        const sentences = gameData[currentCategory];
+        if (currentIdx >= sentences.length) {
+            document.getElementById('feedback').innerHTML = "<span style='color:#ffd700'>Topic Complete!</span>";
+            return;
+        }
+
+        document.getElementById('progress').textContent = `${currentCategory}: ${currentIdx + 1} / ${sentences.length}`;
+        document.getElementById('userInput').value = '';
+        document.getElementById('userInput').classList.remove('correct', 'wrong');
+        document.getElementById('feedback').textContent = '';
+        document.getElementById('checkBtn').style.display = 'inline-block';
+        document.getElementById('revealBtn').style.display = 'inline-block';
+        document.getElementById('nextBtn').style.display = 'none';
+        
+        setTimeout(() => document.getElementById('userInput').focus(), 100);
+    }
+
+    // --- Core Gameplay ---
+    function speakText(rate) {
+        const text = gameData[currentCategory][currentIdx];
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US'; // Default English
+        utterance.rate = rate; 
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function checkAnswer() {
+        const input = document.getElementById('userInput');
+        const userText = input.value.trim(); // Do NOT lowercase or remove punctuation for strict check
+        const correctText = gameData[currentCategory][currentIdx].trim();
+
+        // STRICT LOGIC:
+        // Pre-A1: Lenient (Case insensitive, ignore punctuation)
+        // A1-C2: Strict (Must match exactly)
+        
+        let isCorrect = false;
+
+        if (selectedLevel === "Pre-A1") {
+            // Lenient
+            const cleanUser = userText.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"");
+            const cleanCorrect = correctText.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"");
+            isCorrect = (cleanUser === cleanCorrect);
+        } else {
+            // Strict
+            isCorrect = (userText === correctText);
+        }
+
+        if (isCorrect) {
+            playSfx('correct');
+            input.classList.add('correct');
+            input.classList.remove('wrong');
+            document.getElementById('feedback').innerHTML = `<span class="text-correct">Correct!</span>`;
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            
+            if(isTeamMode) {
+                showPointAssignment();
+            } else {
+                soloScore += 10 + (soloStreak * 5);
+                soloStreak++;
+                renderSoloStats();
+                document.getElementById('checkBtn').style.display = 'none';
+                document.getElementById('revealBtn').style.display = 'none';
+                document.getElementById('nextBtn').style.display = 'inline-block';
+            }
+        } else {
+            playSfx('wrong');
+            input.classList.add('wrong');
+            setTimeout(() => input.classList.remove('wrong'), 500);
+            
+            if(!isTeamMode) {
+                soloStreak = 0;
+                renderSoloStats();
+            }
+            
+            // Helpful Feedback Message
+            let msg = selectedLevel === "Pre-A1" ? "Check spelling!" : "Check punctuation & capitals!";
+            document.getElementById('feedback').innerHTML = `<span class="text-wrong">${msg}</span>`;
+        }
+    }
+
+    function revealAnswer() {
+        const correctText = gameData[currentCategory][currentIdx];
+        document.getElementById('feedback').innerHTML = `<span class="diff-added">${correctText}</span>`;
+        document.getElementById('userInput').value = correctText;
+        document.getElementById('checkBtn').style.display = 'none';
+        document.getElementById('revealBtn').style.display = 'none';
+        document.getElementById('nextBtn').style.display = 'inline-block';
+        if(!isTeamMode) {
+            soloStreak = 0;
+            renderSoloStats();
+        }
+    }
+
+    // --- Team Logic ---
+    function showPointAssignment() {
+        const container = document.getElementById('pointButtons');
+        container.innerHTML = '';
+        teams.forEach((team, idx) => {
+            const btn = document.createElement('div');
+            btn.className = 'team-select-btn';
+            btn.textContent = team.name;
+            btn.onclick = () => assignPoints(idx);
+            container.appendChild(btn);
+        });
+        document.getElementById('pointModal').style.display = 'flex';
+    }
+
+    function assignPoints(idx) {
+        teams[idx].score += 10;
+        renderScoreboard();
+        document.getElementById('pointModal').style.display = 'none';
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        document.getElementById('pointModal').style.display = 'none';
+        currentIdx++;
+        loadLevel();
+    }
+
+    function openRenameModal(idx) {
+        editingTeamIdx = idx;
+        document.getElementById('renameInput').value = teams[idx].name;
+        document.getElementById('renameModal').style.display = 'flex';
+    }
+
+    window.saveTeamName = function() {
+        const newName = document.getElementById('renameInput').value.trim();
+        if(newName) teams[editingTeamIdx].name = newName;
+        document.getElementById('renameModal').style.display = 'none';
+        renderScoreboard();
+    }
+
+    // --- File Upload ---
+    window.handleFileUpload = function(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const text = e.target.result;
+                const newData = {};
+                let currentCat = "Custom";
+                
+                text.split(/\r?\n/).forEach(line => {
+                    line = line.trim();
+                    if(!line) return;
+                    if(line.toLowerCase().startsWith('category:')) {
+                        currentCat = line.split(':')[1].trim();
+                        newData[currentCat] = [];
+                    } else {
+                        if(!newData[currentCat]) newData[currentCat] = [];
+                        newData[currentCat].push(line);
+                    }
+                });
+                
+                if(Object.keys(newData).length > 0) {
+                    gameData = newData;
+                    currentCategory = Object.keys(gameData)[0];
+                    currentIdx = 0;
+                    selectedLevel = "Custom";
+                    document.getElementById('levelBadge').textContent = "Custom";
+                    renderTabs();
+                    loadLevel();
+                    alert("Sentences loaded!");
+                }
+            } catch(err) {
+                alert("Error parsing file");
+            }
+            input.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+</script>
+</body>
+</html>
